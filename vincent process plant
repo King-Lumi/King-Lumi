@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Platform</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <h1>Investment Platform</h1>
+    <form id="payment-form">
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required>
+
+        <label for="amount">Investment Amount (USD):</label>
+        <input type="number" id="amount" name="amount" required>
+
+        <div id="card-element">
+            <!-- Stripe Card Element will be inserted here -->
+        </div>
+
+        <button type="submit">Pay</button>
+        <p id="error-message"></p>
+    </form>
+
+    <script>
+        // Initialize Stripe
+        const stripe = Stripe('YOUR_STRIPE_PUBLIC_KEY');
+        const elements = stripe.elements();
+        const card = elements.create('card');
+        card.mount('#card-element');
+
+        const form = document.getElementById('payment-form');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const { error, paymentMethod } = await stripe.createPaymentMethod({
+                type: 'card',
+                card: card,
+                billing_details: {
+                    email: document.getElementById('email').value,
+                },
+            });
+
+            if (error) {
+                document.getElementById('error-message').textContent = error.message;
+            } else {
+                // Send paymentMethod.id and amount to your server
+                const amount = document.getElementById('amount').value;
+
+                const response = await fetch('/process-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        paymentMethodId: paymentMethod.id,
+                        amount: amount,
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    document.getElementById('error-message').textContent = result.error;
+                } else {
+                    alert('Payment successful! Your payout schedule will start soon.');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
